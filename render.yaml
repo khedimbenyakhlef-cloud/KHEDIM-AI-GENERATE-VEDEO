@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: khedim-ai-generate-video
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 3600
+    envVars:
+      - key: ACCESS_PIN
+        sync: false          # Définir manuellement dans Render Dashboard
+      - key: TPU_URL
+        sync: false          # URL ngrok du notebook Colab
+      - key: PYTHON_VERSION
+        value: 3.11.0

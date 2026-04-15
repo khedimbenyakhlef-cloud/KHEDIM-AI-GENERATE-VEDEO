@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>KHEDIM AI — Generate Video</title>
+<style>
+:root{
+  --bg:#05050f;--bg2:#0a0a1a;--bg3:#101022;--bg4:#181830;
+  --border:#1e1e38;--border2:#28284a;
+  --ai:#6c47ff;--ai2:#00d4ff;--ai3:#00ff9d;
+  --gold:#f5c842;--red:#ff3d6b;--green:#00e57a;
+  --text:#eeeeff;--muted:#5555aa;--dim:#22224a;
+  --r:14px;--r2:8px;--r3:20px;
+  --glow-ai:0 0 32px rgba(108,71,255,0.35);
+  --glow-cyan:0 0 32px rgba(0,212,255,0.25);
+  --shadow:0 12px 48px rgba(0,0,0,0.8);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 65% 45% at 15% 5%,rgba(108,71,255,0.1) 0%,transparent 70%),
+    radial-gradient(ellipse 55% 40% at 85% 90%,rgba(0,212,255,0.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 30% at 50% 50%,rgba(0,255,157,0.03) 0%,transparent 70%);
+}
+/* ═══ LOGIN ═══════════════════════════════════════════════════════════════ */
+.login-overlay{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at center,#0a0a20 0%,#020208 100%);
+}
+.login-box{
+  width:440px;padding:56px 48px;text-align:center;
+  background:linear-gradient(160deg,#0c0c20,#07070f);
+  border:1px solid rgba(108,71,255,0.35);border-radius:28px;
+  box-shadow:0 0 100px rgba(108,71,255,0.18),var(--shadow);
+  position:relative;overflow:hidden;
+}
+.login-box::before{
+  content:'';position:absolute;top:-60%;left:-60%;width:220%;height:220%;
+  background:conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,rgba(108,71,255,0.05) 60deg,transparent 120deg);
+  animation:spin 25s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Logo KHEDIM AI ── */
+.khedim-logo{
+  width:96px;height:96px;margin:0 auto 28px;
+  background:linear-gradient(135deg,#6c47ff,#00d4ff);
+  border-radius:24px;display:flex;align-items:center;justify-content:center;
+  position:relative;box-shadow:0 0 50px rgba(108,71,255,0.5);
+  overflow:hidden;flex-shrink:0;
+}
+.khedim-logo svg{width:56px;height:56px;position:relative;z-index:1}
+.khedim-logo::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent);
+}
+.login-title{
+  font-size:28px;font-weight:900;margin-bottom:4px;letter-spacing:-0.5px;
+  background:linear-gradient(90deg,#fff 20%,var(--ai2),var(--ai));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.login-sub{font-size:11px;color:var(--muted);margin-bottom:36px;letter-spacing:2px;text-transform:uppercase}
+.pin-label{font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;letter-spacing:1px}
+.pin-field{
+  width:100%;padding:18px;text-align:center;letter-spacing:10px;font-size:22px;
+  background:rgba(255,255,255,0.03);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);outline:none;transition:.3s;
+  font-family:monospace;margin-bottom:16px;
+}
+.pin-field:focus{border-color:var(--ai);box-shadow:0 0 0 3px rgba(108,71,255,0.2)}
+.pin-field::placeholder{letter-spacing:3px;font-size:16px;color:var(--muted)}
+.btn-login{
+  width:100%;padding:17px;border:none;border-radius:var(--r2);
+  background:linear-gradient(135deg,var(--ai),var(--ai2));
+  color:#fff;font-size:16px;font-weight:700;cursor:pointer;
+  transition:.25s;letter-spacing:.5px;font-family:inherit;
+}
+.btn-login:hover{transform:translateY(-2px);box-shadow:var(--glow-ai)}
+.btn-login:active{transform:translateY(0)}
+.login-err{
+  color:var(--red);font-size:12px;margin-top:12px;
+  display:none;padding:10px;background:rgba(255,61,107,0.1);
+  border-radius:var(--r2);border:1px solid rgba(255,61,107,0.3);
+}
+.login-hint{font-size:11px;color:var(--muted);margin-top:16px}
+
+/* ═══ APP ═══════════════════════════════════════════════════════════════════ */
+#app{display:none;position:relative;z-index:1}
+
+/* ── Taskbar logo ── */
+.header{
+  height:68px;background:rgba(5,5,15,0.94);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;padding:0 28px;gap:16px;
+}
+.header-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.taskbar-logo{
+  width:44px;height:44px;
+  background:linear-gradient(135deg,#6c47ff,#00d4ff);
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(108,71,255,0.45);flex-shrink:0;
+  position:relative;overflow:hidden;
+}
+.taskbar-logo svg{width:26px;height:26px;position:relative;z-index:1}
+.taskbar-logo::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
+}
+.brand-name{
+  font-size:17px;font-weight:800;letter-spacing:-0.3px;
+  background:linear-gradient(90deg,#fff,var(--ai2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.brand-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.header-spacer{flex:1}
+.tpu-badge{
+  padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px;
+  background:rgba(108,71,255,0.12);border:1px solid rgba(108,71,255,0.3);color:var(--ai2);
+}
+.tpu-dot{width:7px;height:7px;border-radius:50%;background:var(--ai3);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.7)}}
+.btn-logout{
+  padding:8px 16px;border:1px solid var(--border2);border-radius:var(--r2);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:12px;
+  font-family:inherit;transition:.2s;
+}
+.btn-logout:hover{color:var(--red);border-color:var(--red)}
+
+/* ═══ MAIN LAYOUT ═══════════════════════════════════════════════════════════ */
+.main{max-width:1400px;margin:0 auto;padding:32px 24px;display:grid;grid-template-columns:1fr 380px;gap:24px}
+@media(max-width:1100px){.main{grid-template-columns:1fr}}
+
+/* ═══ CARDS ═══════════════════════════════════════════════════════════════ */
+.card{
+  background:linear-gradient(160deg,var(--bg3),var(--bg2));
+  border:1px solid var(--border);border-radius:var(--r3);
+  padding:28px;position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(108,71,255,0.4),transparent);
+}
+.card-title{
+  font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:20px;display:flex;align-items:center;gap:8px;
+}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ═══ PROMPT ═══════════════════════════════════════════════════════════════ */
+.prompt-area{
+  width:100%;min-height:120px;padding:16px;resize:vertical;
+  background:rgba(0,0,0,0.3);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);font-size:15px;
+  font-family:inherit;outline:none;transition:.3s;line-height:1.6;
+}
+.prompt-area:focus{border-color:var(--ai);box-shadow:0 0 0 2px rgba(108,71,255,0.15)}
+.prompt-area::placeholder{color:var(--muted)}
+
+/* ── Row controls ── */
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.ctrl{flex:1;min-width:140px}
+.ctrl label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase}
+.ctrl input,.ctrl select{
+  width:100%;padding:10px 12px;
+  background:rgba(0,0,0,0.3);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);font-size:13px;
+  font-family:inherit;outline:none;transition:.2s;
+}
+.ctrl input:focus,.ctrl select:focus{border-color:var(--ai)}
+.ctrl select option{background:var(--bg3)}
+
+/* ── Toggles ── */
+.toggle-row{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text)}
+.toggle input[type=checkbox]{display:none}
+.toggle-track{
+  width:40px;height:22px;border-radius:11px;
+  background:var(--dim);transition:.3s;position:relative;
+}
+.toggle input:checked + .toggle-track{background:linear-gradient(90deg,var(--ai),var(--ai2))}
+.toggle-thumb{
+  position:absolute;top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:#fff;transition:.3s;
+}
+.toggle input:checked + .toggle-track .toggle-thumb{left:21px}
+
+/* ── Boutons generate ── */
+.btn-row{display:flex;gap:12px;margin-top:20px}
+.btn-gen{
+  flex:1;padding:16px;border:none;border-radius:var(--r2);
+  font-size:14px;font-weight:700;cursor:pointer;transition:.25s;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;
+}
+.btn-gen-video{
+  background:linear-gradient(135deg,var(--ai),var(--ai2));color:#fff;
+}
+.btn-gen-video:hover{transform:translateY(-2px);box-shadow:var(--glow-ai)}
+.btn-gen-img{
+  background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--ai2);
+}
+.btn-gen-img:hover{background:rgba(0,212,255,0.18)}
+.btn-gen:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* ═══ PROGRESS ═══════════════════════════════════════════════════════════ */
+.progress-card{display:none}
+.progress-card.active{display:block}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.progress-step{font-size:13px;color:var(--ai2)}
+.progress-pct{font-size:13px;font-weight:700;color:var(--ai)}
+.progress-bar{height:6px;background:var(--dim);border-radius:3px;overflow:hidden}
+.progress-fill{
+  height:100%;width:0%;border-radius:3px;transition:width .5s ease;
+  background:linear-gradient(90deg,var(--ai),var(--ai2),var(--ai3));
+  background-size:200% 100%;animation:shimmer 2s infinite linear;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.progress-info{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.progress-chip{
+  padding:4px 10px;border-radius:20px;font-size:11px;
+  background:rgba(108,71,255,0.12);border:1px solid rgba(108,71,255,0.25);color:var(--ai2);
+}
+
+/* ═══ RESULT ═══════════════════════════════════════════════════════════════ */
+.result-card{display:none;margin-top:20px}
+.result-card.active{display:block}
+.result-video,.result-img{
+  width:100%;border-radius:var(--r2);border:1px solid var(--border2);
+  background:#000;
+}
+.btn-dl{
+  display:inline-flex;align-items:center;gap:8px;margin-top:12px;
+  padding:12px 24px;border-radius:var(--r2);
+  background:linear-gradient(135deg,var(--ai),var(--ai2));
+  color:#fff;font-size:13px;font-weight:700;text-decoration:none;
+  transition:.2s;
+}
+.btn-dl:hover{transform:translateY(-2px);box-shadow:var(--glow-ai)}
+
+/* ═══ SIDEBAR ═══════════════════════════════════════════════════════════════ */
+.sidebar{display:flex;flex-direction:column;gap:20px}
+
+/* ── TPU Status ── */
+.tpu-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{
+  padding:14px;border-radius:var(--r2);text-align:center;
+  background:rgba(0,0,0,0.2);border:1px solid var(--border);
+}
+.stat-val{font-size:20px;font-weight:800;color:var(--ai2)}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+/* ── Historique ── */
+.history-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto}
+.history-item{
+  padding:12px;border-radius:var(--r2);border:1px solid var(--border);
+  background:rgba(0,0,0,0.2);cursor:pointer;transition:.2s;font-size:12px;
+}
+.history-item:hover{border-color:var(--ai)}
+.history-item-prompt{color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item-meta{color:var(--muted);display:flex;gap:8px}
+.status-badge{
+  display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;
+}
+.status-queued{background:rgba(245,200,66,0.15);color:var(--gold)}
+.status-processing{background:rgba(0,212,255,0.15);color:var(--ai2)}
+.status-done{background:rgba(0,229,122,0.15);color:var(--green)}
+.status-error{background:rgba(255,61,107,0.15);color:var(--red)}
+
+/* ── TPU URL form ── */
+.tpu-url-form{display:flex;gap:8px}
+.tpu-url-input{
+  flex:1;padding:10px 12px;
+  background:rgba(0,0,0,0.3);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);font-size:12px;
+  font-family:monospace;outline:none;transition:.2s;
+}
+.tpu-url-input:focus{border-color:var(--ai)}
+.btn-set-url{
+  padding:10px 16px;border:none;border-radius:var(--r2);
+  background:linear-gradient(135deg,var(--ai),var(--ai2));
+  color:#fff;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:inherit;white-space:nowrap;
+}
+
+/* ═══ SCROLL ═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+
+/* ═══ TOAST ═══════════════════════════════════════════════════════════════ */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 20px;border-radius:var(--r2);font-size:13px;
+  box-shadow:var(--shadow);animation:toastIn .3s ease;max-width:340px;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.toast-success{background:rgba(0,229,122,0.15);border:1px solid rgba(0,229,122,0.3);color:var(--green)}
+.toast-error{background:rgba(255,61,107,0.15);border:1px solid rgba(255,61,107,0.3);color:var(--red)}
+.toast-info{background:rgba(108,71,255,0.15);border:1px solid rgba(108,71,255,0.3);color:var(--ai2)}
+</style>
+</head>
+<body>
+
+<!-- ═══ SVG LOGO (réutilisable) ════════════════════════════════════════════ -->
+<svg style="display:none">
+  <symbol id="logo-icon" viewBox="0 0 56 56">
+    <!-- Film frame + AI play button -->
+    <rect x="4" y="8" width="48" height="40" rx="6" fill="none" stroke="white" stroke-width="2.5"/>
+    <rect x="4" y="14" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <rect x="4" y="24" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <rect x="4" y="34" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <rect x="46" y="14" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <rect x="46" y="24" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <rect x="46" y="34" width="6" height="6" rx="1" fill="white" opacity=".7"/>
+    <!-- Play triangle -->
+    <polygon points="22,20 22,36 38,28" fill="white"/>
+    <!-- AI spark -->
+    <circle cx="42" cy="12" r="7" fill="#00d4ff" opacity=".9"/>
+    <text x="42" y="16" text-anchor="middle" font-size="9" fill="#05050f" font-weight="900">AI</text>
+  </symbol>
+</svg>
+
+<!-- ═══ LOGIN ═══════════════════════════════════════════════════════════════ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="khedim-logo">
+      <svg viewBox="0 0 56 56"><use href="#logo-icon"/></svg>
+    </div>
+    <div class="login-title">KHEDIM AI</div>
+    <div class="login-sub">Generate Video · Pro Studio</div>
+    <div class="pin-label">Code PIN d'accès</div>
+    <input class="pin-field" id="pinInput" type="password"
+           placeholder="• • • • • • •" maxlength="12" autocomplete="off"/>
+    <button class="btn-login" id="btnLogin">🔓 Accéder au Studio</button>
+    <div class="login-err" id="loginErr">❌ Code PIN incorrect. Veuillez réessayer.</div>
+    <div class="login-hint">Entrez votre code PIN pour accéder à KHEDIM AI Generate Video</div>
+  </div>
+</div>
+
+<!-- ═══ APPLICATION ══════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- Header / Taskbar -->
+  <header class="header">
+    <a class="header-brand" href="#">
+      <div class="taskbar-logo">
+        <svg viewBox="0 0 56 56"><use href="#logo-icon"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">KHEDIM AI</div>
+        <div class="brand-sub">Generate Video</div>
+      </div>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="tpu-badge">
+      <span class="tpu-dot"></span>
+      <span id="tpuLabel">TPU v5</span>
+    </div>
+    <button class="btn-logout" id="btnLogout">Déconnexion</button>
+  </header>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Colonne gauche -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+
+      <!-- Prompt -->
+      <div class="card">
+        <div class="card-title">🎬 Création Vidéo IA</div>
+        <textarea class="prompt-area" id="promptInput"
+          placeholder="Décrivez votre scène... ex: 'Un coucher de soleil sur les montagnes avec des nuages roses, vent léger dans les arbres, ambiance épique cinématographique'"
+          rows="5"></textarea>
+
+        <div class="row">
+          <div class="ctrl">
+            <label>Style visuel</label>
+            <select id="styleSelect">
+              <option value="">🤖 Détection automatique IA</option>
+              <option value="cinematic">🎬 Cinématique</option>
+              <option value="cyberpunk">🌆 Cyberpunk</option>
+              <option value="nature">🌿 Nature</option>
+              <option value="scifi">🚀 Sci-Fi</option>
+              <option value="noir">🕵️ Film Noir</option>
+              <option value="fantasy">🏰 Fantasy</option>
+              <option value="horror">👁️ Horreur</option>
+              <option value="romantique">💛 Romantique</option>
+              <option value="epic_battle">⚔️ Épique</option>
+            </select>
+          </div>
+          <div class="ctrl">
+            <label>Durée (secondes)</label>
+            <input type="number" id="durationInput" value="10" min="3" max="600"/>
+          </div>
+          <div class="ctrl">
+            <label>FPS</label>
+            <select id="fpsSelect">
+              <option value="8">8 fps (rapide)</option>
+              <option value="16">16 fps</option>
+              <option value="24" selected>24 fps (cinéma)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="ctrl">
+            <label>Voix Off</label>
+            <select id="voixStyleSelect">
+              <option value="masculin">Masculin</option>
+              <option value="feminin">Féminin</option>
+              <option value="dramatique">Dramatique</option>
+              <option value="epique">Épique</option>
+            </select>
+          </div>
+          <div class="ctrl" style="flex:2">
+            <label>Texte narration (optionnel)</label>
+            <input type="text" id="texteVoix" placeholder="Laissez vide pour narration automatique..."/>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="voixToggle" checked/>
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            🎙️ Voix Off IA
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="musiqueToggle" checked/>
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            🎵 Musique IA
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-gen btn-gen-video" id="btnGenVideo">
+            🎬 Générer la Vidéo
+          </button>
+          <button class="btn-gen btn-gen-img" id="btnGenImg">
+            🖼️ Image HD
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="card progress-card" id="progressCard">
+        <div class="card-title">⚡ Génération en cours</div>
+        <div class="progress-header">
+          <span class="progress-step" id="progressStep">Initialisation...</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-info">
+          <span class="progress-chip" id="chipDevice">TPU v5</span>
+          <span class="progress-chip" id="chipQuality">HD</span>
+          <span class="progress-chip" id="chipFrames">0/0 frames</span>
+        </div>
+        <button class="btn-logout" style="margin-top:14px" id="btnCancel">Annuler</button>
+      </div>
+
+      <!-- Result -->
+      <div class="card result-card" id="resultCard">
+        <div class="card-title">✅ Résultat</div>
+        <div id="resultContent"></div>
+        <a class="btn-dl" id="btnDownload" href="#" download>⬇️ Télécharger</a>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- TPU Status -->
+      <div class="card">
+        <div class="card-title">🔌 TPU Status</div>
+        <div class="tpu-status-grid">
+          <div class="stat-box">
+            <div class="stat-val" id="statDevice">—</div>
+            <div class="stat-lbl">Device</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statQuality">—</div>
+            <div class="stat-lbl">Qualité</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statCores">—</div>
+            <div class="stat-lbl">Cœurs TPU</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statTts">—</div>
+            <div class="stat-lbl">Voix IA</div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="card-title" style="margin-bottom:10px">URL Notebook (ngrok)</div>
+          <div class="tpu-url-form">
+            <input class="tpu-url-input" id="tpuUrlInput" placeholder="https://xxxx.ngrok.io"/>
+            <button class="btn-set-url" id="btnSetUrl">Sauver</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique -->
+      <div class="card">
+        <div class="card-title">📋 Historique Jobs</div>
+        <div class="history-list" id="historyList">
+          <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">
+            Aucun job pour l'instant
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  KHEDIM AI — Generate Video · Frontend v13.0
+//  Authentification par PIN → token de session (pas de clé Anthropic)
+// ════════════════════════════════════════════════════════════════════════════
+
+const API = "";  // Même origine
+let SESSION_TOKEN = localStorage.getItem("khedim_token") || "";
+let currentJobId  = null;
+let pollInterval  = null;
+const jobs        = {};
+
+// ── Utilitaires ──────────────────────────────────────────────────────────
+function toast(msg, type="info"){
+  const el = document.createElement("div");
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById("toastContainer").appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+async function api(path, opts={}){
+  const res = await fetch(API + path, {
+    headers: {
+      "Content-Type":    "application/json",
+      "X-Session-Token": SESSION_TOKEN,
+      ...(opts.headers || {}),
+    },
+    ...opts,
+  });
+  return res;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+async function login(){
+  const pin = document.getElementById("pinInput").value.trim();
+  if(!pin){ showErr("Entrez votre code PIN"); return; }
+
+  const btn = document.getElementById("btnLogin");
+  btn.textContent = "Vérification...";
+  btn.disabled    = true;
+
+  try{
+    const res  = await fetch(API + "/api/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({pin}),
+    });
+    const data = await res.json();
+    if(data.ok && data.token){
+      SESSION_TOKEN = data.token;
+      localStorage.setItem("khedim_token", SESSION_TOKEN);
+      showApp();
+    } else {
+      showErr(data.error || "PIN incorrect");
+    }
+  } catch(e){
+    showErr("Impossible de contacter le serveur");
+  } finally {
+    btn.textContent = "🔓 Accéder au Studio";
+    btn.disabled    = false;
+  }
+}
+
+function showErr(msg){
+  const el = document.getElementById("loginErr");
+  el.textContent = "❌ " + msg;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 4000);
+}
+
+function showApp(){
+  document.getElementById("loginOverlay").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadConfig();
+  fetchHealth();
+  setInterval(fetchHealth, 30000);
+}
+
+async function logout(){
+  await api("/api/logout", {method:"POST"});
+  SESSION_TOKEN = "";
+  localStorage.removeItem("khedim_token");
+  location.reload();
+}
+
+// Vérification token existant au chargement
+async function checkExistingSession(){
+  if(!SESSION_TOKEN) return;
+  try{
+    const res = await api("/api/health");
+    if(res.ok) showApp();
+    else { SESSION_TOKEN = ""; localStorage.removeItem("khedim_token"); }
+  } catch { SESSION_TOKEN = ""; localStorage.removeItem("khedim_token"); }
+}
+
+// ── Config TPU ────────────────────────────────────────────────────────────
+async function loadConfig(){
+  try{
+    const res  = await api("/api/config");
+    const data = await res.json();
+    if(data.tpu_url && data.tpu_url !== "NOT_CONFIGURED")
+      document.getElementById("tpuUrlInput").value = data.tpu_url;
+  } catch {}
+}
+
+async function saveUrl(){
+  const url = document.getElementById("tpuUrlInput").value.trim();
+  if(!url){ toast("Entrez une URL", "error"); return; }
+  try{
+    const res = await api("/api/config", {
+      method:"POST",
+      body: JSON.stringify({tpu_url: url}),
+    });
+    if(res.ok){ toast("✅ URL TPU sauvegardée!", "success"); fetchHealth(); }
+    else       { toast("Erreur de sauvegarde", "error"); }
+  } catch(e){ toast("Erreur réseau", "error"); }
+}
+
+// ── Health / TPU info ─────────────────────────────────────────────────────
+async function fetchHealth(){
+  try{
+    const res  = await api("/api/health");
+    const data = await res.json();
+    const tpu  = data.tpu || {};
+    document.getElementById("statDevice").textContent  = tpu.device || "—";
+    document.getElementById("statQuality").textContent = tpu.quality || "—";
+    document.getElementById("statCores").textContent   = tpu.tpu_cores || "—";
+    document.getElementById("statTts").textContent     = tpu.tts     || "—";
+    document.getElementById("tpuLabel").textContent    = tpu.device  || "TPU v5";
+    document.getElementById("chipDevice").textContent  = tpu.device  || "TPU v5";
+    document.getElementById("chipQuality").textContent = tpu.quality || "HD";
+  } catch {}
+}
+
+// ── Génération ────────────────────────────────────────────────────────────
+async function generate(type){
+  const prompt = document.getElementById("promptInput").value.trim();
+  if(!prompt){ toast("Entrez un prompt!", "error"); return; }
+
+  const body = {
+    prompt,
+    style:          document.getElementById("styleSelect").value || null,
+    duration_sec:   parseInt(document.getElementById("durationInput").value) || 10,
+    fps:            parseInt(document.getElementById("fpsSelect").value) || 24,
+    voix_active:    document.getElementById("voixToggle").checked,
+    style_voix:     document.getElementById("voixStyleSelect").value,
+    texte_voix:     document.getElementById("texteVoix").value.trim() || null,
+    musique_active: document.getElementById("musiqueToggle").checked,
+    resolution:     "1024x1024",
+  };
+
+  const endpoint = type === "video" ? "/api/generate" : "/api/generate_image";
+  try{
+    const res  = await api(endpoint, {method:"POST", body: JSON.stringify(body)});
+    const data = await res.json();
+    if(data.error){ toast("❌ " + data.error, "error"); return; }
+    currentJobId = data.job_id;
+    jobs[currentJobId] = {type, prompt: prompt.slice(0,60)};
+    showProgress();
+    startPoll(currentJobId);
+    toast("🚀 Job lancé! ID: " + currentJobId, "info");
+  } catch(e){
+    toast("Erreur réseau: " + e.message, "error");
+  }
+}
+
+function showProgress(){
+  document.getElementById("progressCard").classList.add("active");
+  document.getElementById("resultCard").classList.remove("active");
+  document.getElementById("btnGenVideo").disabled = true;
+  document.getElementById("btnGenImg").disabled   = true;
+}
+
+function startPoll(jid){
+  clearInterval(pollInterval);
+  pollInterval = setInterval(() => pollJob(jid), 3000);
+}
+
+async function pollJob(jid){
+  try{
+    const res  = await api("/api/status/" + jid);
+    const data = await res.json();
+    updateProgress(data);
+    if(data.status === "done"){
+      clearInterval(pollInterval);
+      showResult(data);
+      refreshHistory();
+    } else if(data.status === "error" || data.status === "cancelled"){
+      clearInterval(pollInterval);
+      toast("❌ " + (data.error || "Annulé"), "error");
+      hideProgress();
+      refreshHistory();
+    }
+  } catch {}
+}
+
+function updateProgress(d){
+  const pct = d.progress || 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressPct").textContent  = pct + "%";
+  document.getElementById("progressStep").textContent = d.step || "En cours...";
+  if(d.device)  document.getElementById("chipDevice").textContent  = d.device;
+  if(d.quality) document.getElementById("chipQuality").textContent = d.quality;
+  if(d.total_frames)
+    document.getElementById("chipFrames").textContent =
+      `${d.current_frame||0}/${d.total_frames} frames`;
+}
+
+function showResult(d){
+  const rc = document.getElementById("resultCard");
+  const content = document.getElementById("resultContent");
+  const dl      = document.getElementById("btnDownload");
+  const url     = d.result;
+  if(!url){ toast("Résultat non trouvé", "error"); hideProgress(); return; }
+
+  // Déterminer si vidéo ou image
+  if(url.includes("/image/")){
+    content.innerHTML = `<img src="${url}" class="result-img" alt="Image générée"/>`;
+  } else {
+    content.innerHTML = `<video class="result-video" controls autoplay loop><source src="${url}"/></video>`;
+  }
+  dl.href      = url;
+  dl.download  = "khedim_ai_" + Date.now() + (url.includes("/image/") ? ".png" : ".mp4");
+
+  rc.classList.add("active");
+  hideProgress();
+  toast("✅ Génération terminée!", "success");
+}
+
+function hideProgress(){
+  document.getElementById("progressCard").classList.remove("active");
+  document.getElementById("btnGenVideo").disabled = false;
+  document.getElementById("btnGenImg").disabled   = false;
+}
+
+async function cancelJob(){
+  if(!currentJobId) return;
+  await api("/api/cancel/" + currentJobId, {method:"POST"});
+  clearInterval(pollInterval);
+  hideProgress();
+  toast("Job annulé", "info");
+}
+
+// ── Historique ────────────────────────────────────────────────────────────
+async function refreshHistory(){
+  try{
+    const res   = await api("/api/jobs");
+    const items = await res.json();
+    const list  = document.getElementById("historyList");
+    if(!items.length){
+      list.innerHTML = `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Aucun job</div>`;
+      return;
+    }
+    list.innerHTML = items.slice(0,20).map(j => `
+      <div class="history-item" onclick="viewJob('${j.result||""}','${j.type||"video"}')">
+        <div class="history-item-prompt">${(j.prompt||"").slice(0,55)||"Job "+j.type}</div>
+        <div class="history-item-meta">
+          <span class="status-badge status-${j.status}">${j.status}</span>
+          <span>${j.progress||0}%</span>
+          <span>${j.quality||""}</span>
+        </div>
+      </div>
+    `).join("");
+  } catch {}
+}
+
+function viewJob(url, type){
+  if(!url) return;
+  const rc = document.getElementById("resultCard");
+  const content = document.getElementById("resultContent");
+  const dl      = document.getElementById("btnDownload");
+  if(type === "image"){
+    content.innerHTML = `<img src="${url}" class="result-img"/>`;
+  } else {
+    content.innerHTML = `<video class="result-video" controls autoplay loop><source src="${url}"/></video>`;
+  }
+  dl.href     = url;
+  dl.download = "khedim_ai_" + Date.now() + (type==="image"?".png":".mp4");
+  rc.classList.add("active");
+}
+
+// ── Events ────────────────────────────────────────────────────────────────
+document.getElementById("btnLogin").addEventListener("click", login);
+document.getElementById("pinInput").addEventListener("keydown", e => { if(e.key==="Enter") login(); });
+document.getElementById("btnLogout").addEventListener("click", logout);
+document.getElementById("btnGenVideo").addEventListener("click", () => generate("video"));
+document.getElementById("btnGenImg").addEventListener("click",   () => generate("image"));
+document.getElementById("btnCancel").addEventListener("click",   cancelJob);
+document.getElementById("btnSetUrl").addEventListener("click",   saveUrl);
+
+// Rafraîchissement historique toutes les 10s quand connecté
+setInterval(() => {
+  if(SESSION_TOKEN) refreshHistory();
+}, 10000);
+
+// Init
+checkExistingSession();
+</script>
+</body>
+</html>

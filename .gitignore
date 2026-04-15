@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════
+#  KHEDIM AI — .gitignore
+# ═══════════════════════════════════════════════════════
+
+# Secrets & clés — NE JAMAIS committer
+.env
+.env.*
+secrets.json
+*.key
+*.pem
+
+# Outputs générés (vidéos, images, audio)
+outputs/
+logs/
+frames/
+audio/
+temp/
+segments/
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+*.m4a
+*.png
+*.jpg
+*.jpeg
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Environnements virtuels
+venv/
+env/
+.venv/
+.env/
+
+# Jupyter / Colab checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Modèles HuggingFace (trop lourds)
+models/
+*.safetensors
+*.bin
+*.ot
+
+# ngrok
+.ngrok/
+
+# Logs
+*.log
+server.log
