@@ -1,6 +1,8 @@
 {
   "colab_url": "https://untelegraphed-natosha-herpetological.ngrok-free.dev",
-  "updated_at": "2026-04-16T09:51:03.694309Z",
+  "updated_at": "2026-04-16T11:32:00.315090+00:00",
   "device": "CPU",
-  "quality": "SD"
+  "quality": "SD",
+  "resolution": "512x288",
+  "platform": "Kaggle TPU v5"
 }
